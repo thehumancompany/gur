@@ -782,7 +782,9 @@ _bur_gpg_key_get() {
     _git_service \
     _evm_gpg_opts=() \
     _msg=() \
+    _temp_key \
     _bur_name
+  _temp_key="${_cache_dir}/${_target_namespace}/bur-secret.key"
   if (( 1 < "${#}" )); then
     _git_service="${2}"
   fi
@@ -807,15 +809,28 @@ _bur_gpg_key_get() {
   elif [[ " ${!_bur_keys[*]} " != *" ${_bur_id} "* ]]; then
     _msg=(
       "Opening key for address"
-      "'${_bur_id}'."
+      "'${_bur_id}'. Running"
+      "evm-gpg with options"
+      "'${_evm_gpg_opts[*]} export"
+      "${_temp_key} private'."
     )
     _msg_info \
       "${_msg[*]}"
+    evm-gpg \
+      -v \
+      "${_evm_gpg_opts[@]}" \
+      export \
+      "${_temp_key}" \
+      "private"
     _bur_keys["${_bur_id}"]="$(
-      evm-gpg \
-        "${_evm_gpg_opts[@]}" \
-        export || \
-        true)"
+      cat \
+        "${_temp_key}")"
+    rm \
+      "${_temp_key}"
+    # evm-gpg \
+    #   "${_evm_gpg_opts[@]}" \
+    #   export || \
+    #   true)"
   fi
   _bur_gpg_key="${_bur_keys["${_bur_id}"]}"
   if [[ "${_bur_gpg_key}" == "" ]]; then
@@ -3614,26 +3629,16 @@ _gur_build() {
         "Gur generated commit." || \
     echo \
       "false")"
+  _msg=(
+    "No changes have been committed."
+  )
+  _msg_info \
+    "${_msg[*]}"
   if [[ "${_committed}" == "" ]]; then
     _msg=(
       "Gur generated commit.")
     _msg_info \
       "${_msg[*]}"
-  elif [[ "${_committed}" == "false" ]]; then
-    _msg=(
-      "No changes have been commit."
-    )
-    _msg_info \
-      "${_msg[*]}"
-  else
-    echo \
-      "${_committed}"
-    _msg=(
-      "Different commit error message."
-    )
-    _msg_error \
-      "${_msg[*]}" \
-      1
   fi
   _tag_exists="$(
     git \
