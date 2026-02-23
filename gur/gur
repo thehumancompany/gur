@@ -887,7 +887,14 @@ _github_repo_create() {
     _fork="${1}" \
     _create_individual \
     _create_org \
+    _repo_private_msg=() \
     _visibility
+  _repo_private_msg=(
+    "GraphQL: Could not resolve to"
+    "a Repository with the name"
+    "'${_namespace_main}/${_repo}'."
+    "(repository)"
+  )
   if [[ "${_fork}" == "y" ]]; then
     gh \
       auth \
@@ -902,7 +909,9 @@ _github_repo_create() {
           --json \
             "visibility" \
           --jq \
-            ".visibility")"
+            ".visibility" \
+        2>&1 || \
+        true)"
     if [[ "${_visibility}" == "PRIVATE" ]]; then
       _gh_opts+=(
         --private
@@ -962,6 +971,17 @@ _github_repo_create() {
       else
         _create="${_create_individual}"
       fi
+    elif [[ "${_visibility}" == "${_repo_private_msg[*]}" ]]; then
+      _gh_opts+=(
+          --private
+        )
+      _create="$(
+        gh \
+          repo \
+            create \
+            "${_gh_opts[@]}" \
+            2>&1 || \
+        true)"
     elif [[ "${_visibility}" == "" ]]; then
       if [[ "${_namespace}" == "${_namespace_main}" ]]; then
         _gh_opts+=(
@@ -3503,13 +3523,24 @@ _repo_sync() {
       "${_repo}" \
       "${_git_service}"
     if [[ "${_repo_new_failed}" != "true" ]]; then
+      _branch="$(
+        git \
+          branch |
+          tail \
+            -n 1 |
+            awk \
+              '{print $2}')"
       _msg=(
-        "Pushing to '${_remote}'."
+        "Pushing branch '${_branch}'"
+        "to '${_remote}'."
       )
+      _msg_info \
+        "${_msg[*]}"
       _push="$(
         git \
           push \
             "${_remote}" \
+            "${_branch}"
           2>&1 || \
           true)"
       if [[ "${_push}" ==  "Everything up-to-date" ]]; then
