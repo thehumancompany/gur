@@ -791,14 +791,17 @@ _bur_gpg_key_get() {
   _bur_id="${_git_service}.bur.${_target_namespace}"
   if [[ "${quiet}" == "n" ]]; then
     _evm_gpg_opts+=(
-      -N
-        "${_bur_id}"
-      -t
-        "private"
+      -v
     )
   fi
-  echo \
-    "opened keys: ${!_bur_keys[*]}"
+  _evm_gpg_opts+=(
+    -N
+      "${_bur_id}"
+    -t
+      "private"
+  )
+  _msg_info \
+    "Opened keys: ${!_bur_keys[*]}"
   if [[ " ${!_bur_keys[*]} " == *" ${_bur_id} "* ]]; then
     _msg=(
       "Reusing open key for address"
@@ -816,6 +819,10 @@ _bur_gpg_key_get() {
     )
     _msg_info \
       "${_msg[*]}"
+    mkdir \
+      -p \
+      "$(dirname \
+           "${_temp_key}")"
     evm-gpg \
       -v \
       "${_evm_gpg_opts[@]}" \
@@ -827,10 +834,6 @@ _bur_gpg_key_get() {
         "${_temp_key}")"
     rm \
       "${_temp_key}"
-    # evm-gpg \
-    #   "${_evm_gpg_opts[@]}" \
-    #   export || \
-    #   true)"
   fi
   _bur_gpg_key="${_bur_keys["${_bur_id}"]}"
   if [[ "${_bur_gpg_key}" == "" ]]; then
