@@ -831,22 +831,25 @@ _bur_gpg_key_get() {
       "private"
     _bur_keys["${_bur_id}"]="$(
       cat \
-        "${_temp_key}")"
+        "${_temp_key}" || \
+        true)"
     rm \
+      -rf \
       "${_temp_key}"
   fi
   _bur_gpg_key="${_bur_keys["${_bur_id}"]}"
   if [[ "${_bur_gpg_key}" == "" ]]; then
-    if [[ "${quiet}" == "n" ]]; then
-      _evm_gpg_opts+=(
-        -v
-      )
-    fi
+    _msg=(
+      "Found no key with id '${_bur_id}',"
+      "creating."
+    )
+    _msg_info \
+      "${_msg[*]}"
     evm-gpg \
       "${_evm_gpg_opts[@]}" \
       new \
       "${_bur_id}" \
-      "'${_target_namespace}' bur '${_target_namespace}' builder signing key"
+      "'${_target_namespace}' bur builder signing key"
     _bur_keys["${_bur_id}"]="$(
       evm-gpg \
         "${_evm_gpg_opts[@]}" \
@@ -886,6 +889,11 @@ _github_repo_create() {
     _create_org \
     _visibility
   if [[ "${_fork}" == "y" ]]; then
+    gh \
+      auth \
+        switch \
+        -u \
+          "${_namespace}"
     _visibility="$(
       gh \
         repo \
@@ -911,10 +919,17 @@ _github_repo_create() {
         gh \
           repo \
             fork \
+            --org \
+              "${_namespace}" \
             "${_namespace_main}/${_repo}" \
             2>&1 || \
-            true)"
-      if [[ "${_create_individual}" == "${_namespace_active}/${_repo} already exists" ]]; then
+        gh \
+          repo \
+            fork \
+            "${_namespace_main}/${_repo}" \
+            2>&1 ||
+        true)"                          # here it was $_namespace_active"
+      if [[ " ${_create_individual} " == " "*"/${_repo} already exists " ]]; then
         _create="$(
           gh \
             repo \
@@ -924,7 +939,7 @@ _github_repo_create() {
               "${_namespace_main}/${_repo}" \
               2>&1 || \
           true)"
-      elif [[ "${_create_individual}" == "${_namespace_active}/${_repo}-"*" already exists" ]]; then
+      elif [[ " ${_create_individual} " == " "*"/${_repo}"*" already exists " ]]; then
         _create="$(
           gh \
             repo \
